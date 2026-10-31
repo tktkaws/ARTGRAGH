@@ -7,11 +7,23 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "check": "astro check",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "data:fetch": "node scripts/fetch-artworks.mjs",
+    "test:build": "node scripts/verify-build.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^7.4.4"
+    "astro": "^7.4.4",
+    "d3-force": "^3.0.0",
+    "force-graph": "^1.52.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@types/d3-force": "^3.0.10",
+    "@types/node": "^26.6.6",
+    "typescript": "^6.0.3"
   }
 }
