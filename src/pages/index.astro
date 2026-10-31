@@ -1,16 +1,29 @@
 ---
----
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import GraphSettings from '../components/GraphSettings.astro';
+import { graph } from '../lib/graph/build';
+import { KIND_LABELS } from '../lib/graph/classification';
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+---
+<Layout>
+  <div class="graph-app">
+    <header class="app-header"><a class="brand" href="/" aria-label="ARTGRAPH ホーム"><span class="brand-icon"><Icon name="graph" size={23} /></span>ARTGRAPH<span class="brand-dot">.</span></a><div class="header-divider"></div><div class="help-control"><button class="icon-button" id="help-toggle" aria-label="操作ガイド" aria-expanded="false" aria-controls="help-panel"><Icon name="info" size={19} /></button><aside class="help-panel panel" id="help-panel" hidden><div class="panel-heading"><span>グラフの歩き方</span><button class="icon-button" data-close="help" aria-label="ガイドを閉じる"><Icon name="close" size={17} /></button></div><dl><div><dt>ホイール / ピンチ</dt><dd>拡大・縮小</dd></div><div><dt>背景をドラッグ</dt><dd>視点を移動</dd></div><div><dt>点をドラッグ</dt><dd>配置を調整</dd></div><div><dt>点をクリック / タップ</dt><dd>作品ページを開く</dd></div><div><dt><kbd>/</kbd> / <kbd>Esc</kbd></dt><dd>検索 / パネルを閉じる</dd></div></dl><p>キーボードからは「作品一覧」で各作品に移動できます。</p></aside></div></header>
+    <nav class="side-rail" aria-label="表示切り替え"><button class="rail-button active" id="graph-tab" aria-label="グラフ表示" title="グラフ表示"><Icon name="graph" size={21} /></button><button class="rail-button" id="list-toggle" aria-label="作品一覧を開く" aria-expanded="false" aria-controls="article-panel" title="作品一覧"><Icon name="list" size={21} /></button><span class="rail-line"></span><button class="rail-button" id="settings-toggle" aria-label="グラフ設定を開閉" aria-expanded="true" aria-controls="settings-panel" title="グラフ設定"><Icon name="settings" size={21} /></button></nav>
+    <main class="graph-workspace" id="main">
+      <div id="graph-canvas" role="img" aria-label="クリーブランド美術館の作品とそのつながり。各作品は作品一覧からも開けます。"></div>
+      <div class="explore-heading"><div class="eyebrow">EXPLORE THE CONNECTIONS</div><h1>グラフビュー<span> / </span><small>世界の6地域</small></h1><label class="search-box"><Icon name="search" size={17} /><input id="graph-search" type="search" placeholder="作品・作者を探す…" aria-label="作品名・作者・地域・年代・種類で検索" autocomplete="off" /><kbd>/</kbd></label></div>
+      <div id="graph-loading" class="graph-message" role="status">グラフを準備しています…</div>
+      <div id="empty-state" class="graph-message" hidden><Icon name="search" size={28} /><h2>見つかりませんでした</h2><p>作品名や作者、フィルタを変更してみてください。</p><button class="subtle-button" id="clear-filters">フィルタを解除</button></div>
+      <div class="zoom-controls panel"><button class="icon-button" id="zoom-out" aria-label="縮小"><Icon name="minus" size={17} /></button><output id="zoom-level">100%</output><button class="icon-button" id="zoom-in" aria-label="拡大"><Icon name="plus" size={17} /></button><span></span><button class="icon-button" id="zoom-fit" aria-label="全体を表示" title="全体を表示"><Icon name="fit" size={17} /></button></div>
+      <div class="hover-card panel" id="node-preview" hidden aria-hidden="true"><img id="preview-image" src="/artwork-placeholder.svg" alt="" width="78" height="78" /><div><span class="eyebrow" id="preview-number"></span><strong id="preview-title"></strong><p id="preview-types"></p></div><Icon name="arrow" size={16} /></div>
+      <GraphSettings />
+      <aside class="article-panel panel" id="article-panel" aria-label="作品一覧" hidden><div class="panel-heading"><span><Icon name="list" size={17} />作品一覧</span><button class="icon-button" data-close="articles" aria-label="作品一覧を閉じる"><Icon name="close" size={18} /></button></div><p class="list-hint">検索とフィルタはグラフと連動します。</p><div id="article-list" class="article-list">{graph.nodes.map(node => <a href={node.href} data-node-id={node.id} class="article-list-item"><img src={node.image} alt="" width="42" height="42" loading="lazy" /><span><small>{node.accessionNumber}</small><strong>{node.title}</strong></span><span class="list-type">{KIND_LABELS[node.kind]}</span><Icon name="arrow" size={14} /></a>)}</div></aside>
+
+      <noscript><div class="noscript-notice">グラフ表示にはJavaScriptが必要です。<a href="#fallback-articles">作品一覧へ移動</a></div><style>.article-panel[hidden]{display:block}</style></noscript>
+    </main>
+    <footer class="status-bar"><span><span class="status-dot"></span><span id="node-count" aria-live="polite">{graph.nodes.length}</span> ノード<span class="status-separator">/</span><span id="link-count">{graph.links.length}</span> リンク</span><span class="footer-hint">ドラッグで移動<span>·</span>スクロールで拡大縮小</span><a href="https://www.clevelandart.org/open-access" target="_blank" rel="noreferrer">Cleveland Museum of Art · CC0 <span>↗</span></a></footer>
+  </div>
+  <script src="../scripts/graph-view.ts"></script>
+  <div id="fallback-articles" class="sr-only"><h2>全作品ページ</h2>{graph.nodes.map(node => <a href={node.href}>{node.title}</a>)}</div>
+</Layout>

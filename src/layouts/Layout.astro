@@ -1,0 +1,14 @@
+---
+import '../styles/global.css';
+interface Props { title?: string; description?: string; }
+const { title = 'ARTGRAPH', description = 'クリーブランド美術館のCC0作品を、世界の6地域・年代・種類からグラフで探索するコレクション。' } = Astro.props;
+---
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="description" content={description} /><meta name="theme-color" content="#1b1b1f" /><link rel="icon" type="image/svg+xml" href="/favicon.svg" /><title>{title}</title></head>
+  <body><slot /><script>
+    document.addEventListener('error', event => {
+      const target = event.target;
+      if (target instanceof HTMLImageElement && !target.src.endsWith('/artwork-placeholder.svg')) target.src = '/artwork-placeholder.svg';
+    }, true);
+  </script></body>
+</html>

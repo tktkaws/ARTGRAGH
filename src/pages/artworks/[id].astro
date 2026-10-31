@@ -1,0 +1,63 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+import { artworks, graph } from '../../lib/graph/build';
+import { artworkTitle, creatorLabel } from '../../lib/graph/artworks';
+import { REGION_LABELS, KIND_LABELS, PERIOD_LABELS, classifyKind, classifyPeriod } from '../../lib/graph/classification';
+import { getArtworkTranslation, localizedDate, localizedCulture, localizedDepartment, localizedMeasurements } from '../../lib/graph/localization';
+export function getStaticPaths() {
+  return artworks.map(artwork => ({ params: { id: String(artwork.id) }, props: { artwork } }));
+}
+const { artwork } = Astro.props;
+const title = artworkTitle(artwork);
+const translation = getArtworkTranslation(artwork);
+const description = translation?.description || artwork.description;
+const didYouKnow = translation?.didYouKnow || artwork.didYouKnow;
+const kind = classifyKind(artwork.type);
+const period = classifyPeriod(artwork.yearStart);
+const index = artworks.findIndex(item => item.id === artwork.id);
+const previous = artworks[index - 1];
+const next = artworks[index + 1];
+const nodeId = `artwork:${artwork.id}`;
+const related = graph.links.filter(link => link.source === nodeId || link.target === nodeId).map(link => ({
+  link, artwork: artworks.find(item => `artwork:${item.id}` === (link.source === nodeId ? link.target : link.source))!,
+}));
+const facts = [
+  ['所蔵番号', artwork.accessionNumber], ['原題', artwork.originalTitle], ['制作年代', localizedDate(artwork.date)],
+  ['地域', REGION_LABELS[artwork.region]], ['文化', artwork.cultures.map(localizedCulture).join(' / ')], ['技法・素材', translation?.technique || artwork.technique],
+  ['寸法', localizedMeasurements(artwork.measurements)], ['シリーズ', artwork.series], ['収蔵部門', localizedDepartment(artwork.department)],
+].filter(([, value]) => value);
+---
+<Layout title={`${title} — ARTGRAPH`} description={description || `${title}。${creatorLabel(artwork)}、${localizedDate(artwork.date)}。`}>
+  <header class="article-header">
+    <a class="brand" href="/"><span class="brand-icon"><Icon name="graph" size={23} /></span>ARTGRAPH<span class="brand-dot">.</span></a>
+    <a class="back-link" href={`/?focus=${artwork.id}`}><Icon name="back" size={17} />グラフに戻る</a>
+  </header>
+  <main class="artwork-article">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="/">作品コレクション</a><span>/</span><span>{title}</span></nav>
+    <div class="article-hero">
+      <div class="artwork-art"><img src={artwork.image} alt={title} width={artwork.imageWidth} height={artwork.imageHeight} fetchpriority="high" /></div>
+      <div class="artwork-intro">
+        <div class="eyebrow">クリーブランド美術館 <span>—</span> CC0</div>
+        <h1>{title}</h1>
+        {artwork.title !== title && <p class="english-name" lang="en">{artwork.title}</p>}
+        <p class="creator-name">{creatorLabel(artwork)}</p>
+        <div class="type-tags"><a href={`/?region=${artwork.region}`}>{REGION_LABELS[artwork.region]}</a><a href={`/?period=${period}`}>{PERIOD_LABELS[period]}</a><a href={`/?kind=${kind}`}>{KIND_LABELS[kind]}</a></div>
+        {description ? <p class="artwork-description" lang={translation ? 'ja' : 'en'}>{description}</p> : <p class="muted">この作品の解説文は提供されていません。作品情報と所蔵元のページをご覧ください。</p>}
+        {translation && <p class="translation-note">日本語は当サイトによる参考訳です（一部要約）。</p>}
+        <a class="text-link" href={artwork.sourceUrl} target="_blank" rel="noreferrer">美術館の作品ページを見る<Icon name="arrow" size={16} /></a>
+      </div>
+    </div>
+    <div class="article-sections">
+      <section><div class="section-title"><span class="eyebrow">作品データ</span><h2>作品情報</h2></div><dl class="artwork-details">{facts.map(([label, value]) => <div><dt>{label}</dt><dd>{value}</dd></div>)}</dl>{didYouKnow && <div class="artwork-note"><h3>作品の豆知識</h3><p lang={translation ? 'ja' : 'en'}>{didYouKnow}</p></div>}
+        <details class="source-text"><summary>美術館の原文を読む（英語）</summary><div lang="en"><h3>{artwork.title}</h3>{artwork.creators.length > 0 && <p>{artwork.creators.map(creator => creator.name).join(' / ')}</p>}<p>{artwork.date} · {artwork.cultures.join(' / ')}</p><p>{artwork.technique}</p><p>{artwork.measurements}</p><p>{artwork.description}</p><p>{artwork.didYouKnow}</p></div></details>
+      </section>
+      <section><div class="section-title"><span class="eyebrow">関連作品</span><h2>作品のつながり</h2></div><p class="connection-note">美術館の関連情報と、作者・シリーズ・地域と種類の共通点から線を作成しています。</p>
+        {related.length ? <div class="related-list">{related.map(({ artwork: item, link }) => <a class="related-card" href={`/artworks/${item.id}/`}><img src={item.image} alt="" width="75" height="75" loading="lazy" /><div><small>{link.label}</small><strong>{artworkTitle(item)}</strong></div><Icon name="arrow" size={18} /></a>)}</div> : <p class="muted">このコレクション内には接続された作品がありません。</p>}
+        <a class="text-link" href={`/?focus=${artwork.id}`}>グラフでつながりを見る<Icon name="arrow" size={16} /></a>
+      </section>
+    </div>
+    <nav class="article-pagination" aria-label="前後の作品">{previous ? <a href={`/artworks/${previous.id}/`}><Icon name="back" size={18} /><span><small>前の作品</small>{artworkTitle(previous)}</span></a> : <span></span>}{next && <a href={`/artworks/${next.id}/`}><span><small>次の作品</small>{artworkTitle(next)}</span><Icon name="arrow" size={18} /></a>}</nav>
+    <footer class="article-footer"><p>画像・原文データ：<a href={artwork.sourceUrl} target="_blank" rel="noreferrer">クリーブランド美術館 ↗</a> / <a href={artwork.licenseUrl} target="_blank" rel="noreferrer">CC0 1.0 ↗</a></p><p><a href={artwork.apiUrl} target="_blank" rel="noreferrer">元のAPIデータ ↗</a> · 独自に作成した探索用サイトです。</p></footer>
+  </main>
+</Layout>
