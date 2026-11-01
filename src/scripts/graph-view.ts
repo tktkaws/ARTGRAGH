@@ -6,7 +6,7 @@ import {
   nodeColor,
   parseSettings,
 } from "../lib/graph/model";
-import type { GraphData, GraphNode, GraphSettings } from "../lib/graph/types";
+import type { GraphData, GraphNode } from "../lib/graph/types";
 
 type ViewNode = GraphNode & NodeObject;
 type ViewLink = LinkObject<ViewNode> & {
@@ -31,9 +31,11 @@ async function start() {
   const textColor = getComputedStyle(document.documentElement).getPropertyValue("--text").trim();
   let settings = structuredClone(DEFAULT_SETTINGS);
   try {
-    settings = parseSettings(
+    // Restore only preferences still exposed by the settings panel.
+    const stored = parseSettings(
       JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"),
     );
+    settings.showOrphans = stored.showOrphans;
   } catch {}
   const query = el<HTMLInputElement>("graph-search");
   const regionFilter = el<HTMLSelectElement>("region-filter");
@@ -161,7 +163,6 @@ async function start() {
   let focusedId = params.get("focus") ? `artwork:${params.get("focus")}` : null;
   let neighbors = new Set<string>();
   let filtered: GraphData = data;
-  let running = !reducedMotion;
   let pointerStart: { x: number; y: number } | null = null;
   let dragged = false;
   let disposed = false;
@@ -270,25 +271,14 @@ async function start() {
     })
     .onNodeDrag(() => {
       dragged = true;
-      setRunning(true);
     })
     .onNodeDragEnd(() => {
       graph.cooldownTicks(0);
-      setRunning(false);
     })
     .onZoom(({ k }) => {
       el("zoom-level").textContent = `${Math.round(k * 100)}%`;
     })
-    .onZoomEnd(() => saveView())
-    .onEngineStop(() => setRunning(false));
-
-  function setRunning(value: boolean) {
-    running = value;
-    el("animate").querySelector("span")!.textContent = value
-      ? "アニメーション停止"
-      : "アニメーション開始";
-    el("animate").setAttribute("aria-pressed", String(value));
-  }
+    .onZoomEnd(() => saveView());
 
   function saveView() {
     if (disposed) return;
@@ -319,7 +309,7 @@ async function start() {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ version: 1, settings }),
+        JSON.stringify({ version: 1, settings: { showOrphans: settings.showOrphans } }),
       );
     } catch {
       document.querySelector(".panel-footnote")!.textContent =
@@ -350,7 +340,6 @@ async function start() {
         .cooldownTicks(reducedMotion ? 1 : Infinity)
         .cooldownTime(reducedMotion ? 0 : 3000)
         .d3ReheatSimulation();
-      setRunning(!reducedMotion);
     }
   }
 
@@ -436,133 +425,18 @@ async function start() {
   }
 
   function syncControls() {
-    document
-      .querySelectorAll<HTMLInputElement>("[data-setting]")
-      .forEach((input) => {
-        const key = input.dataset.setting as keyof GraphSettings;
-        if (input.type === "checkbox") input.checked = settings[key] as boolean;
-        else {
-          input.value = String(settings[key]);
-          input.style.setProperty(
-            "--range-progress",
-            `${((Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min))) * 100}%`,
-          );
-          document.querySelector<HTMLOutputElement>(
-            `[data-output="${key}"]`,
-          )!.value = Number(input.value).toFixed(key === "distance" ? 0 : 2);
-        }
-      });
+    el<HTMLInputElement>("show-orphans").checked = settings.showOrphans;
   }
-
-  function renderGroups() {
-    const list = el("color-groups");
-    list.replaceChildren();
-    settings.groups.forEach((group, index) => {
-      const row = document.createElement("div");
-      row.className = "color-group";
-      const color = document.createElement("input");
-      color.type = "color";
-      color.value = group.color;
-      color.setAttribute("aria-label", `グループ${index + 1}の色`);
-      color.addEventListener(
-        "input",
-        () => {
-          group.color = color.value;
-          redraw();
-          saveSettings();
-        },
-        { signal },
-      );
-      const text = document.createElement("input");
-      text.type = "text";
-      text.value = group.query;
-      text.placeholder = "例：アジア、1800年代、彫刻";
-      text.maxLength = 100;
-      text.setAttribute("aria-label", `グループ${index + 1}の条件`);
-      text.addEventListener(
-        "input",
-        () => {
-          group.query = text.value;
-          redraw();
-          saveSettings();
-        },
-        { signal },
-      );
-      row.append(color, text);
-      for (const [label, glyph, change, disabled] of [
-        ["上へ移動", "↑", -1, index === 0],
-        ["下へ移動", "↓", 1, index === settings.groups.length - 1],
-        ["削除", "×", 0, false],
-      ] as const) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = glyph;
-        button.setAttribute("aria-label", `グループ${index + 1}を${label}`);
-        button.disabled = disabled;
-        button.addEventListener(
-          "click",
-          () => {
-            if (!change) settings.groups.splice(index, 1);
-            else
-              [settings.groups[index], settings.groups[index + change]] = [
-                settings.groups[index + change]!,
-                settings.groups[index]!,
-              ];
-            redraw();
-            saveSettings();
-            renderGroups();
-          },
-          { signal },
-        );
-        row.append(button);
-      }
-      list.append(row);
-    });
-    (el("add-group") as HTMLButtonElement).disabled =
-      settings.groups.length >= 20;
-  }
-
-  el("add-group").addEventListener(
-    "click",
-    () => {
-      settings.groups.push({
-        id: crypto.randomUUID(),
-        query: "",
-        color: ["#a78bfa", "#86c8ac", "#e4ad7d", "#85b4e3"][
-          settings.groups.length % 4
-        ]!,
-      });
-      renderGroups();
+  el<HTMLInputElement>("show-orphans").addEventListener(
+    "change",
+    (event) => {
+      settings.showOrphans = (event.currentTarget as HTMLInputElement).checked;
+      updateData();
       saveSettings();
-      el("color-groups")
-        .querySelector<HTMLInputElement>(
-          ".color-group:last-child input[type=text]",
-        )
-        ?.focus();
+      saveView();
     },
     { signal },
   );
-  document
-    .querySelectorAll<HTMLInputElement>("[data-setting]")
-    .forEach((input) =>
-      input.addEventListener(
-        "input",
-        () => {
-          const key = input.dataset.setting!;
-          Object.assign(settings, {
-            [key]:
-              input.type === "checkbox" ? input.checked : Number(input.value),
-          });
-          syncControls();
-          applyStyle();
-          if (key === "showOrphans") updateData();
-          if (["center", "repulsion", "linkStrength", "distance"].includes(key))
-            applyForces();
-          saveSettings();
-        },
-        { signal },
-      ),
-    );
   el("reset-settings").addEventListener(
     "click",
     () => {
@@ -573,24 +447,10 @@ async function start() {
       kindFilter.value = "";
       focusedId = null;
       syncControls();
-      renderGroups();
       applyStyle();
       updateData();
       saveSettings();
       saveView();
-    },
-    { signal },
-  );
-  el("animate").addEventListener(
-    "click",
-    () => {
-      if (running) {
-        graph.cooldownTicks(0);
-        setRunning(false);
-      } else {
-        graph.cooldownTicks(Infinity).cooldownTime(6000).d3ReheatSimulation();
-        setRunning(true);
-      }
     },
     { signal },
   );
@@ -682,9 +542,7 @@ async function start() {
   applyForces(false);
   applyStyle();
   syncControls();
-  renderGroups();
   updateData(false);
-  setRunning(!reducedMotion);
   el("graph-loading").hidden = true;
   const observer = new ResizeObserver(() =>
     graph.width(container.clientWidth).height(container.clientHeight),

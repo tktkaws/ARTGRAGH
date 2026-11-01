@@ -3,17 +3,6 @@ import Icon from './Icon.astro';
 import { DEFAULT_SETTINGS } from '../lib/graph/model';
 import { regionCounts } from '../lib/graph/build';
 import { KIND_LABELS, PERIOD_LABELS } from '../lib/graph/classification';
-const ranges = [
-  { key: 'fade', label: 'テキストフェードの閾値', min: 0, max: 4, step: 0.1 },
-  { key: 'nodeSize', label: 'ノードの大きさ', min: 0.3, max: 3, step: 0.1 },
-  { key: 'linkWidth', label: 'リンクの太さ', min: 0.2, max: 4, step: 0.1 },
-] as const;
-const forces = [
-  { key: 'center', label: '中心力', min: 0, max: 1, step: 0.01 },
-  { key: 'repulsion', label: '反発力', min: 0, max: 30, step: 0.5 },
-  { key: 'linkStrength', label: 'リンクする力', min: 0, max: 1, step: 0.01 },
-  { key: 'distance', label: 'リンクの距離', min: 30, max: 300, step: 5 },
-] as const;
 ---
 <aside class="settings panel" id="settings-panel" aria-label="グラフ設定">
   <div class="panel-heading"><span><Icon name="settings" size={17} /> グラフ設定</span><div class="heading-actions"><button class="icon-button" id="reset-settings" title="設定をリセット" aria-label="設定をリセット"><Icon name="reset" size={16} /></button><button class="icon-button" data-close="settings" aria-label="設定を閉じる"><Icon name="close" size={18} /></button></div></div>
@@ -23,10 +12,7 @@ const forces = [
       <label class="field-label filter-label" for="period-filter">年代</label><select id="period-filter"><option value="">すべての年代</option>{Object.entries(PERIOD_LABELS).map(([id, label]) => <option value={id}>{label}</option>)}</select>
       <label class="field-label filter-label" for="kind-filter">種類</label><select id="kind-filter"><option value="">すべての種類</option>{Object.entries(KIND_LABELS).map(([id, label]) => <option value={id}>{label}</option>)}</select>
       <p class="field-hint">3項目を組み合わせて絞り込めます。年代は制作開始年を基準に分類しています。</p>
-      <label class="switch-row"><span>孤立ノードを表示</span><input type="checkbox" data-setting="showOrphans" checked /><span class="toggle" aria-hidden="true"></span></label></div></details>
-    <details open><summary><Icon name="chevron" size={15} />グループ<span class="section-note">色で分類</span></summary><div class="section-content"><div id="color-groups"></div><button class="subtle-button full" id="add-group"><Icon name="plus" size={15} />新規グループ</button><p class="field-hint">地域・年代・種類などで色分け。上の条件が優先されます。</p></div></details>
-    <details open><summary><Icon name="chevron" size={15} />表示</summary><div class="section-content"><label class="switch-row"><span>矢印を表示</span><input type="checkbox" data-setting="arrows" /><span class="toggle" aria-hidden="true"></span></label>{ranges.map(item => <label class="range-field"><span>{item.label}<output data-output={item.key}>{DEFAULT_SETTINGS[item.key].toFixed(2)}</output></span><input type="range" data-setting={item.key} min={item.min} max={item.max} step={item.step} value={DEFAULT_SETTINGS[item.key]} /></label>)}<button class="subtle-button full" id="animate"><Icon name="play" size={15} /><span>アニメーション開始</span></button></div></details>
-    <details open><summary><Icon name="chevron" size={15} />力の強さ</summary><div class="section-content">{forces.map(item => <label class="range-field"><span>{item.label}<output data-output={item.key}>{DEFAULT_SETTINGS[item.key].toFixed(item.key === 'distance' ? 0 : 2)}</output></span><input type="range" data-setting={item.key} min={item.min} max={item.max} step={item.step} value={DEFAULT_SETTINGS[item.key]} /></label>)}</div></details>
+      <label class="switch-row"><span>孤立ノードを表示</span><input id="show-orphans" type="checkbox" data-setting="showOrphans" checked={DEFAULT_SETTINGS.showOrphans} /><span class="toggle" aria-hidden="true"></span></label></div></details>
     <div class="panel-footnote"><span class="status-dot"></span>設定はこのブラウザに保存されます</div>
   </div>
 </aside>
