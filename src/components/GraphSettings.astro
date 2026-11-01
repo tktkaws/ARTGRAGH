@@ -13,6 +13,7 @@ import { KIND_LABELS, PERIOD_LABELS } from '../lib/graph/classification';
       <label class="field-label filter-label" for="kind-filter">種類</label><select id="kind-filter"><option value="">すべての種類</option>{Object.entries(KIND_LABELS).map(([id, label]) => <option value={id}>{label}</option>)}</select>
       <p class="field-hint">3項目を組み合わせて絞り込めます。年代は制作開始年を基準に分類しています。</p>
       <label class="switch-row"><span>孤立ノードを表示</span><input id="show-orphans" type="checkbox" data-setting="showOrphans" checked={DEFAULT_SETTINGS.showOrphans} /><span class="toggle" aria-hidden="true"></span></label></div></details>
+    <div class="section-content node-image-setting"><label class="switch-row"><span>作品画像で表示</span><input id="image-nodes" type="checkbox" data-setting="imageNodes" checked={DEFAULT_SETTINGS.imageNodes} /><span class="toggle" aria-hidden="true"></span></label></div>
     <div class="panel-footnote"><span class="status-dot"></span>設定はこのブラウザに保存されます</div>
   </div>
 </aside>

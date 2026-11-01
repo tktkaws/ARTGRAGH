@@ -51,6 +51,15 @@ test('corrupt settings fall back and numeric settings are clamped', () => {
   assert.equal(parsed.arrows, false);
   assert.deepEqual(parsed.groups, []);
 });
+test('image nodes are opt-in and persist without breaking older saved filter settings', () => {
+  assert.equal(DEFAULT_SETTINGS.imageNodes, false);
+  assert.equal(parseSettings({ version: 1, settings: { imageNodes: true } }).imageNodes, true);
+  assert.equal(parseSettings({ version: 1, settings: { imageNodes: false } }).imageNodes, false);
+  assert.equal(parseSettings({ version: 1, settings: { imageNodes: 'true' } }).imageNodes, false);
+  const legacy = parseSettings({ version: 1, settings: { showOrphans: false } });
+  assert.equal(legacy.showOrphans, false);
+  assert.equal(legacy.imageNodes, false);
+});
 test('duplicate IDs, invalid URLs, self links, duplicate links and unknown endpoints are rejected', () => {
   assert.throws(() => validateGraph({ nodes: [graph.nodes[0]!, graph.nodes[0]!], links: [] }));
   assert.throws(() => validateGraph({ nodes: [{ ...graph.nodes[0]!, href: '/external/' }], links: [] }));

@@ -412,6 +412,7 @@ kbd {
   margin-bottom: 8px;
 }
 .filter-label { margin-top: 16px; }
+.node-image-setting { border-bottom: 1px solid var(--line); }
 .switch-row {
   display: flex;
   align-items: center;

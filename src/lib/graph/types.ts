@@ -34,6 +34,7 @@ export type GraphSettings = {
   linkStrength: number;
   distance: number;
   showOrphans: boolean;
+  imageNodes: boolean;
   groups: ColorGroup[];
 };
 

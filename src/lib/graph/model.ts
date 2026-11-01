@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   linkStrength: 1,
   distance: 100,
   showOrphans: true,
+  imageNodes: false,
   groups: [],
 };
 
@@ -107,7 +108,7 @@ export function parseSettings(value: unknown): GraphSettings {
     if (typeof val === "number" && Number.isFinite(val))
       Object.assign(defaults, { [key]: Math.max(min!, Math.min(max!, val)) });
   }
-  for (const key of ["arrows", "showOrphans"] as const)
+  for (const key of ["arrows", "showOrphans", "imageNodes"] as const)
     if (typeof input[key] === "boolean") defaults[key] = input[key];
   if (Array.isArray(input.groups))
     defaults.groups = input.groups

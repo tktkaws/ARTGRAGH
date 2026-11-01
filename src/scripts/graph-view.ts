@@ -17,6 +17,8 @@ type ViewLink = LinkObject<ViewNode> & {
 };
 const STORAGE_KEY = "artgraph:settings:v1";
 const VIEW_KEY = "artgraph:view:v2";
+const THUMBNAIL_SIZE = 160;
+const IMAGE_LOAD_LIMIT = 4;
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 const controller = new AbortController();
@@ -36,6 +38,7 @@ async function start() {
       JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"),
     );
     settings.showOrphans = stored.showOrphans;
+    settings.imageNodes = stored.imageNodes;
   } catch {}
   const query = el<HTMLInputElement>("graph-search");
   const regionFilter = el<HTMLSelectElement>("region-filter");
@@ -166,6 +169,72 @@ async function start() {
   let pointerStart: { x: number; y: number } | null = null;
   let dragged = false;
   let disposed = false;
+  const thumbnails = new Map<string, HTMLCanvasElement | null>();
+  const pendingImages: string[] = [];
+  const loadingImages = new Set<HTMLImageElement>();
+  let wantedImages = new Set<string>();
+  let imageRedraw: number | undefined;
+
+  function scheduleImageRedraw() {
+    if (disposed || !settings.imageNodes || imageRedraw !== undefined) return;
+    imageRedraw = requestAnimationFrame(() => {
+      imageRedraw = undefined;
+      if (!disposed && settings.imageNodes) redraw();
+    });
+  }
+
+  function loadNextImages() {
+    if (disposed || !settings.imageNodes) return;
+    while (loadingImages.size < IMAGE_LOAD_LIMIT && pendingImages.length) {
+      const url = pendingImages.shift()!;
+      if (!wantedImages.has(url)) {
+        thumbnails.delete(url);
+        continue;
+      }
+      const image = new Image();
+      image.decoding = 'async';
+      loadingImages.add(image);
+      const finish = (thumbnail: HTMLCanvasElement | null) => {
+        image.onload = null;
+        image.onerror = null;
+        loadingImages.delete(image);
+        if (disposed) return;
+        thumbnails.set(url, thumbnail);
+        if (thumbnail) scheduleImageRedraw();
+        loadNextImages();
+      };
+      image.onload = () => {
+        try {
+          const side = Math.min(image.naturalWidth, image.naturalHeight);
+          const thumbnail = document.createElement('canvas');
+          thumbnail.width = thumbnail.height = THUMBNAIL_SIZE;
+          const context = thumbnail.getContext('2d');
+          if (!context || !side) { finish(null); return; }
+          context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+          finish(thumbnail);
+        } catch {
+          finish(null);
+        }
+      };
+      image.onerror = () => finish(null);
+      image.src = url;
+    }
+  }
+
+  function queueNodeImages() {
+    if (!settings.imageNodes || disposed) return;
+    wantedImages = new Set(filtered.nodes.map(node => node.image).filter(Boolean));
+    for (const url of wantedImages) {
+      if (thumbnails.has(url)) continue;
+      thumbnails.set(url, null);
+      pendingImages.push(url);
+    }
+    loadNextImages();
+  }
+
+  function imageRadius(active: boolean) {
+    return (active ? 22 : 18) * settings.nodeSize;
+  }
   const positions = new Map<string, { x: number; y: number }>();
   for (const [id, point] of Object.entries(savedView.positions ?? {}))
     if (point && Number.isFinite(point.x) && Number.isFinite(point.y))
@@ -202,7 +271,8 @@ async function start() {
     .nodeCanvasObject((node, ctx, scale) => {
       const active = hover?.id === node.id || focusedId === node.id;
       const connected = neighbors.has(node.id);
-      const radius = (active ? 5 : 3.3) * settings.nodeSize;
+      const thumbnail = settings.imageNodes ? thumbnails.get(node.image) : null;
+      const radius = thumbnail ? imageRadius(active) : (active ? 5 : 3.3) * settings.nodeSize;
       const x = node.x ?? 0,
         y = node.y ?? 0;
       ctx.globalAlpha = hover && !active && !connected ? 0.27 : 1;
@@ -215,15 +285,22 @@ async function start() {
       }
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = active ? "#d0b3ff" : nodeColor(node, settings);
-      ctx.fill();
+      if (thumbnail) {
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(thumbnail, x - radius, y - radius, radius * 2, radius * 2);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = active ? "#d0b3ff" : nodeColor(node, settings);
+        ctx.fill();
+      }
       const opacity =
         active || connected
           ? 1
           : Math.max(0, Math.min(1, (scale - settings.fade) / 0.65));
       if (opacity > 0) {
         ctx.globalAlpha *= opacity;
-        const fontSize = 11 / Math.sqrt(Math.max(0.5, scale));
+        const fontSize = (settings.imageNodes ? 8 : 11) / Math.sqrt(Math.max(0.5, scale));
         ctx.font = `400 ${fontSize}px "Noto Sans JP", sans-serif`;
         ctx.fillStyle = textColor;
         ctx.textAlign = "center";
@@ -238,7 +315,7 @@ async function start() {
       ctx.arc(
         node.x ?? 0,
         node.y ?? 0,
-        Math.max(3.3 * settings.nodeSize, 10 / scale),
+        Math.max(settings.imageNodes ? imageRadius(hover?.id === node.id || focusedId === node.id) : 3.3 * settings.nodeSize, 10 / scale),
         0,
         Math.PI * 2,
       );
@@ -309,7 +386,7 @@ async function start() {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ version: 1, settings: { showOrphans: settings.showOrphans } }),
+        JSON.stringify({ version: 1, settings: { showOrphans: settings.showOrphans, imageNodes: settings.imageNodes } }),
       );
     } catch {
       document.querySelector(".panel-footnote")!.textContent =
@@ -418,6 +495,7 @@ async function start() {
       "aria-label",
       `${nodes.length}作品と${filtered.links.length}本のつながり。作品一覧からも移動できます。`,
     );
+    queueNodeImages();
     if (autoFit) {
       applyForces();
       requestAnimationFrame(fit);
@@ -426,7 +504,18 @@ async function start() {
 
   function syncControls() {
     el<HTMLInputElement>("show-orphans").checked = settings.showOrphans;
+    el<HTMLInputElement>("image-nodes").checked = settings.imageNodes;
   }
+  el<HTMLInputElement>("image-nodes").addEventListener(
+    "change",
+    (event) => {
+      settings.imageNodes = (event.currentTarget as HTMLInputElement).checked;
+      queueNodeImages();
+      redraw();
+      saveSettings();
+    },
+    { signal },
+  );
   el<HTMLInputElement>("show-orphans").addEventListener(
     "change",
     (event) => {
@@ -577,6 +666,15 @@ async function start() {
         return;
       }
       disposed = true;
+      if (imageRedraw !== undefined) cancelAnimationFrame(imageRedraw);
+      pendingImages.length = 0;
+      for (const image of loadingImages) {
+        image.onload = null;
+        image.onerror = null;
+        image.removeAttribute('src');
+      }
+      loadingImages.clear();
+      thumbnails.clear();
       observer.disconnect();
       graph._destructor();
       controller.abort();
