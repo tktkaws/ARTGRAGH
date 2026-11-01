@@ -1,0 +1,24 @@
+---
+import Icon from '../Icon.astro';
+import { DEMO_NODES, FORCE_CONTROLS } from '../../lib/learn/force-graph-demo';
+import { FORCE_PRESETS } from '../../lib/learn/d3-simulation';
+interface Props { instance: string; mode: 'tick' | 'charge' | 'link' | 'position'; }
+const { instance, mode } = Astro.props;
+const controlId = (name: string) => `${instance}-${name}`;
+const visibleSettings = mode === 'charge' ? ['repulsion'] : mode === 'link' ? ['distance', 'linkStrength'] : mode === 'position' ? ['center'] : [];
+---
+<section class="demo-workspace" data-d3-force-demo data-instance={instance} data-mode={mode} aria-label="d3-forceのデモ">
+  <div class="demo-stage">
+    <div class="demo-stage-toolbar"><span id={controlId('d3-state')} role="status">準備中</span><span>alpha <output id={controlId('d3-alpha')}>1.000</output></span><button id={controlId('d3-fit')} type="button" aria-label="全体を表示" title="全体を表示" disabled><Icon name="fit" size={16} /></button></div>
+    <div class="demo-canvas-wrap"><svg id={controlId('d3-svg')} class="demo-svg" viewBox="-350 -250 700 500" role="img" aria-label="d3-forceで計算した座標をSVGへ表示する6ノードのデモ"><g aria-hidden="true"><line class="demo-axis" x1="-10000" x2="10000" y1="0" y2="0" /><line class="demo-axis" x1="0" x2="0" y1="-10000" y2="10000" /><text class="demo-origin" x="8" y="-10">0, 0</text></g><g id={controlId('d3-lines')}></g><g id={controlId('d3-nodes')}></g></svg><p id={controlId('d3-error')} class="demo-overlay" role="alert" hidden>デモを読み込めませんでした。</p><div class="demo-canvas-hint">d3-forceの計算結果を、独自のSVG描画で表示</div></div>
+    <div class="demo-inspector"><span class="demo-small-label">注目するノード</span><div class="lab-node-buttons" role="group" aria-label="座標を確認するノード">{DEMO_NODES.map(node => <button type="button" data-d3-node={node.id} aria-pressed={node.id === 'A' ? 'true' : 'false'} aria-label={`ノード${node.id}の座標を確認`} disabled>{node.id}</button>)}</div></div>
+    <div class="demo-coordinate-table"><table><caption id={controlId('d3-coordinate-caption')}>ノード A の計算結果</caption><thead><tr><th scope="col">x</th><th scope="col">y</th><th scope="col">vx</th><th scope="col">vy</th></tr></thead><tbody><tr>{['x', 'y', 'vx', 'vy'].map(key => <td><output id={controlId(`d3-${key}`)}>0.00</output></td>)}</tr></tbody></table></div>
+  </div>
+  <div class="demo-panel">
+    <details open><summary><span>01</span>力を組み合わせる</summary><div class="demo-controls"><div class="demo-presets" hidden={mode !== 'position'} role="group" aria-label="力のプリセット">{FORCE_PRESETS.map(preset => <button type="button" data-d3-preset={preset.id} aria-pressed={preset.id === 'all' ? 'true' : 'false'} disabled>{preset.label}</button>)}</div><label class="demo-toggle"><input id={controlId('d3-charge')} type="checkbox" checked disabled />反発力を使う</label><label class="demo-toggle" hidden={mode === 'tick' || mode === 'charge'}><input id={controlId('d3-link')} type="checkbox" checked disabled />リンクの力を使う</label><label class="demo-toggle" hidden={mode !== 'position'}><input id={controlId('d3-position')} type="checkbox" checked disabled />中心力を使う</label></div></details>
+    <details open hidden={mode === 'tick'}><summary><span>02</span>力の値</summary><div class="demo-controls">{FORCE_CONTROLS.map(control => <label class="demo-range" hidden={!visibleSettings.includes(control.key)} for={controlId(`d3-${control.key}`)}><span>{control.label}<output id={controlId(`d3-output-${control.key}`)}>{control.value}</output></span><input id={controlId(`d3-${control.key}`)} data-d3-setting={control.key} type="range" min={control.min} max={control.max} step={control.step} value={control.value} aria-describedby={controlId(`d3-hint-${control.key}`)} disabled /><small id={controlId(`d3-hint-${control.key}`)}>{control.hint}</small></label>)}</div></details>
+    <details open><summary><span>03</span>計算の進め方</summary><div class="demo-controls"><button type="button" id={controlId('d3-run')} class="demo-button demo-primary" aria-pressed="false" disabled>計算を再開</button><button type="button" id={controlId('d3-step')} class="demo-button" disabled>1 tickだけ進める</button><button type="button" id={controlId('d3-reset')} class="demo-button" disabled><Icon name="reset" size={15} />初期位置と設定に戻す</button></div></details>
+    <details><summary>現在の力に対応するコード</summary><pre class="demo-code"><code id={controlId('d3-code')}>準備しています…</code></pre></details>
+  </div>
+  <noscript><p class="demo-noscript">デモの操作にはJavaScriptが必要です。</p></noscript>
+</section>

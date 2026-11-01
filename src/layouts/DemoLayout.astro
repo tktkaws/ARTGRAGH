@@ -1,0 +1,23 @@
+---
+import Layout from './Layout.astro';
+import Icon from '../components/Icon.astro';
+import '../styles/graph-lesson.css';
+interface Props { library: 'force-graph' | 'd3-force'; summary: string; }
+const { library, summary } = Astro.props;
+---
+<Layout title={`${library}の基礎とデモ | ARTGRAPH`} description={`${library}の基礎を、解説と対応するデモで順に学びます。${summary}`}>
+  <div class="graph-lesson">
+    <header class="app-header lesson-header">
+      <a class="brand" href="/" aria-label="ARTGRAPH ホーム"><span class="brand-icon"><Icon name="graph" size={23} /></span>ARTGRAPH<span class="brand-dot">.</span></a>
+      <a class="lesson-back" href="/">作品のグラフへ<Icon name="arrow" size={16} /></a>
+    </header>
+    <main class="lesson-main">
+      <div class="demo-page-heading"><h1>{library}<span> / {summary}</span></h1></div>
+      <div class="lesson-intro"><slot name="intro" /></div>
+      <nav class="demo-navigation" aria-label="ライブラリのデモ"><a href="/learn/force-graph/" aria-current={library === 'force-graph' ? 'page' : undefined}>force-graph <small>描画・操作</small></a><a href="/learn/d3-force/" aria-current={library === 'd3-force' ? 'page' : undefined}>d3-force <small>位置の計算</small></a></nav>
+      <slot name="contents" />
+      <div class="lesson-sequence"><slot /></div>
+      <footer class="lesson-resources"><a href={`/learn/${library}/notes.md`} download={`${library}.md`}>補足ノートを保存（Markdown）<Icon name="arrow" size={14} /></a><a href="/">作品のグラフへ戻る<Icon name="arrow" size={14} /></a></footer>
+    </main>
+  </div>
+</Layout>

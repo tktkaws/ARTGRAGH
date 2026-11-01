@@ -185,6 +185,20 @@ input[type="range"]::-moz-range-thumb {
   height: 20px;
   background: var(--line);
 }
+.help-learn-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 12px;
+}
+.help-learn-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 .status-dot {
   display: inline-block;
   flex-shrink: 0;

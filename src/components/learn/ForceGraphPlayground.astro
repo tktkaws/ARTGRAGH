@@ -1,0 +1,26 @@
+---
+import Icon from '../Icon.astro';
+import { DEMO_NODES } from '../../lib/learn/force-graph-demo';
+interface Props { instance: string; mode: 'basics' | 'appearance' | 'filter'; }
+const { instance, mode } = Astro.props;
+const controlId = (name: string) => `${instance}-${name}`;
+const ranges = [
+  { key: 'nodeSize', label: 'ノードの大きさ', min: 0.5, max: 2, step: 0.1, value: 1 },
+  { key: 'linkWidth', label: '線の太さ', min: 0.5, max: 5, step: 0.5, value: 1.5 },
+  { key: 'fade', label: 'ラベルを出すズーム倍率', min: 0, max: 3, step: 0.1, value: 1.3 },
+];
+---
+<section class="demo-workspace" data-force-graph-demo data-instance={instance} data-mode={mode} aria-label="force-graphのデモ">
+  <div class="demo-stage">
+    <div class="demo-stage-toolbar"><span id={controlId('fg-count')} role="status">6 ノード / 6 リンク</span><span id={controlId('fg-zoom')}>100%</span><button type="button" id={controlId('fg-zoom-out')} aria-label="縮小" disabled><Icon name="minus" size={16} /></button><button type="button" id={controlId('fg-zoom-in')} aria-label="拡大" disabled><Icon name="plus" size={16} /></button><button type="button" id={controlId('fg-fit')} aria-label="全体を表示" title="全体を表示" disabled><Icon name="fit" size={16} /></button></div>
+    <div class="demo-canvas-wrap"><div id={controlId('fg-canvas')} class="demo-canvas" role="img" aria-label="AからFのノードと接続。下のボタンでもノードを選択できます。"></div><p id={controlId('fg-empty')} class="demo-overlay" hidden>一致するノードがありません</p><p id={controlId('fg-error')} class="demo-overlay" role="alert" hidden>デモを読み込めませんでした。上の解説は引き続き読めます。</p><div class="demo-canvas-hint">点を選択・ドラッグ / 背景を移動 / ホイールでズーム</div></div>
+    <div class="demo-inspector"><div class="lab-node-buttons" role="group" aria-label="ノードを選択">{DEMO_NODES.map(node => <button type="button" data-fg-node={node.id} aria-pressed={node.id === 'A' ? 'true' : 'false'} aria-label={`ノード${node.id}を選択`} disabled>{node.id}</button>)}</div><p id={controlId('fg-selection')} aria-live="polite">A：接続先 B・C</p><button id={controlId('fg-reset')} class="demo-button" type="button" disabled><Icon name="reset" size={15} />このデモをリセット</button></div>
+    <details class="demo-data"><summary>表示中のnodes / links</summary><pre><code id={controlId('fg-data')}>データを準備しています…</code></pre></details>
+  </div>
+  <div class="demo-panel">
+    <details open hidden={mode !== 'basics'}><summary><span>01</span>基本操作</summary><div class="demo-controls"><label class="demo-toggle"><input id={controlId('fg-links')} data-fg-toggle type="checkbox" checked disabled />線を表示</label><label class="demo-toggle"><input id={controlId('fg-highlight')} data-fg-toggle type="checkbox" checked disabled />接続先を強調</label><label class="demo-toggle"><input id={controlId('fg-drag')} data-fg-toggle type="checkbox" checked disabled />ノードをドラッグ</label></div></details>
+    <details open hidden={mode !== 'appearance'}><summary><span>02</span>描画のカスタマイズ</summary><div class="demo-controls"><label class="demo-toggle"><input id={controlId('fg-colors')} data-fg-toggle type="checkbox" disabled />グループで色分け</label><label class="demo-toggle"><input id={controlId('fg-arrows')} data-fg-toggle type="checkbox" disabled />矢印を表示</label>{ranges.map(range => <label class="demo-range" for={controlId(`fg-${range.key}`)}><span>{range.label}<output id={controlId(`fg-output-${range.key}`)}>{range.value}</output></span><input id={controlId(`fg-${range.key}`)} data-fg-style={range.key} type="range" min={range.min} max={range.max} step={range.step} value={range.value} disabled /></label>)}</div></details>
+    <details open hidden={mode !== 'filter'}><summary><span>03</span>検索とフィルタ</summary><div class="demo-controls"><label class="demo-field" for={controlId('fg-search')}>ノードIDで検索<input id={controlId('fg-search')} type="search" placeholder="例：A" autocomplete="off" disabled /></label><label class="demo-field" for={controlId('fg-group')}>グループ<select id={controlId('fg-group')} disabled><option value="">すべて</option><option value="left">A・B・C</option><option value="right">D・E・F</option></select></label><label class="demo-toggle"><input id={controlId('fg-orphans')} type="checkbox" checked disabled />孤立ノードを表示</label><button id={controlId('fg-clear')} type="button" class="demo-button" disabled>検索とフィルタを解除</button></div></details>
+  </div>
+  <noscript><p class="demo-noscript">デモの操作にはJavaScriptが必要です。</p></noscript>
+</section>

@@ -1,0 +1,65 @@
+---
+import DemoLayout from '../../layouts/DemoLayout.astro';
+import D3ForcePlayground from '../../components/learn/D3ForcePlayground.astro';
+import LessonStep from '../../components/learn/LessonStep.astro';
+const tickCode = [
+  'const simulation = forceSimulation(nodes)',
+  "  .force('charge', forceManyBody().strength(-100))",
+  '  .stop();',
+  '',
+  'simulation.tick(); // 1回だけ位置と速度を更新',
+  'render(nodes);     // 描画はアプリ側の処理',
+  '',
+  'simulation.alpha(1).restart(); // 自動計算を再開',
+].join('\n');
+const chargeCode = [
+  'simulation',
+  "  .force('charge', forceManyBody().strength(-100))",
+  '  .alpha(1)',
+  '  .restart();',
+].join('\n');
+const linkCode = [
+  "simulation.force('link', forceLink(links)",
+  '  .id(node => node.id)',
+  '  .distance(90)',
+  '  .strength(0.4)',
+  ');',
+].join('\n');
+const positionCode = [
+  'simulation',
+  "  .force('x', forceX(0).strength(0.05))",
+  "  .force('y', forceY(0).strength(0.05));",
+  '',
+  '// force-graph内部の計算へ適用する場合',
+  "graph.d3Force('center', null);",
+  "graph.d3Force('x', forceX(0).strength(0.05));",
+  "graph.d3Force('y', forceY(0).strength(0.05));",
+  'graph.d3ReheatSimulation();',
+].join('\n');
+---
+<DemoLayout library="d3-force" summary="座標・tick・反発・リンク・中心力">
+  <p slot="intro"><strong>d3-forceは、ノードに働く力から位置と速度を計算するライブラリです。</strong>画面へ描く処理は別に必要です。このページではforce-graphを使わず、計算結果をSVGへ描いています。計算を1歩ずつ進め、力をひとつずつ足して確かめます。</p>
+  <nav slot="contents" class="lesson-contents" aria-label="学習の順番"><a href="#coordinates-and-ticks"><span>01</span>座標とtick</a><a href="#repulsion"><span>02</span>反発力</a><a href="#link-force"><span>03</span>リンクの力</a><a href="#position-force"><span>04</span>中心力</a></nav>
+  <LessonStep id="coordinates-and-ticks" step="01" title="位置と速度を、1 tickずつ観察する" code={tickCode}>
+    <div slot="explanation"><p>ノードは位置の<code>x</code>・<code>y</code>と、速度の<code>vx</code>・<code>vy</code>を持ちます。計算の1歩を<strong>tick</strong>と呼び、力による速度の変化を位置へ反映します。下のデモは、反発力を設定し、計算を止めた状態から始まります。</p><p><code>stop()</code>で止めても描いた点は消えません。手動の<code>tick()</code>はtickイベントを発火しないので、その後に自分で再描画します。<strong>alpha</strong>は計算の活発さを調整する値で、時間とともに減少します。再開時は<code>alpha(1).restart()</code>で活発な状態へ戻します。</p></div>
+    <p slot="task">Aを選び、「1 tickだけ進める」を数回押して位置と速度を比較。リセット後に反発力をオフにすると、初期速度が0の点は動かないことも確認できます。</p>
+    <D3ForcePlayground instance="d3-tick" mode="tick" />
+  </LessonStep>
+  <LessonStep id="repulsion" step="02" title="反発力で、ノード同士を離す" code={chargeCode}>
+    <div slot="explanation"><p><code>forceManyBody()</code>はノード同士へ働く力です。<code>strength()</code>が負なら反発、正なら引力として働きます。スライダーは反発の大きさを正の数で表示し、内部では符号を反転して渡しています。</p><p>このデモにはリンクの力と中心力がありません。線は接続関係を表示しているだけで、点を引き戻していません。反発力だけで広がった場合は「全体を表示」で表示範囲を調整できます。</p></div>
+    <p slot="task">反発力を100から350へ変更し、広がり方を比較。設定を変えた後に計算が再開し、停止ボタンでその瞬間の配置を止められることも試してください。</p>
+    <D3ForcePlayground instance="d3-charge" mode="charge" />
+  </LessonStep>
+  <LessonStep id="link-force" step="03" title="リンクでつながった点を、目標距離へ近づける" code={linkCode}>
+    <div slot="explanation"><p><code>forceLink()</code>は、つながった点を<code>distance()</code>で指定した距離へ近づけます。<code>strength()</code>は、その作用の強さです。IDで指定した接続先を見つけるため、<code>id(node =&gt; node.id)</code>も設定します。</p><p>このデモは反発力とリンクの力を組み合わせています。ほかの力も作用するため、目標距離を90にしても、すべての線が必ず長さ90になるわけではありません。リンクの力をオフにしても、線の表示そのものは残ります。</p></div>
+    <p slot="task">リンクの目標距離を90から160へ変更。次にリンクする力を0と1で比較し、接続先へ作用する強さと距離の違いを見てください。</p>
+    <D3ForcePlayground instance="d3-link" mode="link" />
+  </LessonStep>
+  <LessonStep id="position-force" step="04" title="中心力を加え、3つの力のつり合いを見る" code={positionCode}>
+    <div slot="explanation"><p><code>forceX(0)</code>と<code>forceY(0)</code>は、各ノードを原点へ引く力です。デモの十字の交点が原点です。反発力で広がろうとする点を引き戻し、全体の広がりを調整します。</p><p>これは重心全体を移す<code>forceCenter()</code>とは別です。ARTGRAPHはforce-graphの既定のcenterを外してX・Y方向の力を追加し、<code>d3ReheatSimulation()</code>で内部の計算を再開します。別のシミュレーションを重ねて動かしているわけではありません。</p></div>
+    <p slot="task">中心力を0と0.15で比較。「力なし」「反発だけ」「反発＋リンク」「中心力も追加」を切り替え、各組み合わせを初期位置から試してください。</p>
+    <D3ForcePlayground instance="d3-position" mode="position" />
+  </LessonStep>
+  <div class="lesson-next"><p>本番では、作品から点と線を作り、ここで学んだ配置計算をforce-graphの描画へつなぎます。</p><a href="/">ARTGRAPHの作品グラフへ →</a><a class="lesson-source" href="https://d3js.org/d3-force">d3-force公式ドキュメント</a></div>
+  <script src="../../scripts/learn-d3-force.ts"></script>
+</DemoLayout>

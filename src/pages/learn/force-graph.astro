@@ -1,0 +1,65 @@
+---
+import DemoLayout from '../../layouts/DemoLayout.astro';
+import ForceGraphPlayground from '../../components/learn/ForceGraphPlayground.astro';
+import LessonStep from '../../components/learn/LessonStep.astro';
+import { DEMO_NODES, DEMO_LINKS } from '../../lib/learn/force-graph-demo';
+const dataCode = `import ForceGraph from 'force-graph';
+
+// HTMLに、高さを持つ表示領域を用意
+// <div id="graph" style="height: 400px;"></div>
+const container = document.getElementById('graph');
+const data = ${JSON.stringify({ nodes: DEMO_NODES.map(({ id, group }) => ({ id, group })), links: DEMO_LINKS }, null, 2)};
+
+const graph = new ForceGraph(container)
+  .width(container.clientWidth)
+  .height(container.clientHeight)
+  .nodeId('id')
+  .graphData(structuredClone(data));
+
+graph.onNodeClick(node => console.log(node.id));`;
+const appearanceCode = [
+  'const textColor = getComputedStyle(document.documentElement)',
+  "  .getPropertyValue('--text').trim();",
+  '',
+  'graph.nodeCanvasObject((node, ctx, scale) => {',
+  '  ctx.beginPath();',
+  '  ctx.arc(node.x, node.y, 6, 0, Math.PI * 2);',
+  "  ctx.fillStyle = '#bcb9c5';",
+  '  ctx.fill();',
+  '  if (scale > 1.3) {',
+  '    ctx.fillStyle = textColor;',
+  '    ctx.fillText(node.id, node.x, node.y + 15);',
+  '  }',
+  '});',
+  'graph.linkWidth(2);',
+].join('\n');
+const filterCode = [
+  "const nodes = data.nodes.filter(n => n.group === 'left');",
+  'const ids = new Set(nodes.map(n => n.id));',
+  'const links = data.links.filter(link =>',
+  '  ids.has(link.source) && ids.has(link.target)',
+  ');',
+  'graph.graphData(structuredClone({ nodes, links }));',
+].join('\n');
+---
+<DemoLayout library="force-graph" summary="描画・操作・絞り込み">
+  <p slot="intro"><strong>force-graphは、つながりを持つデータをCanvasに描き、ズームやクリックなどの操作を扱うライブラリです。</strong>ここでいうグラフは、数値の棒グラフではなく、点と線で関係を表すもの。各説明の下にあるデモを操作しながら、作品のグラフビューに必要な基本を確認します。</p>
+  <nav slot="contents" class="lesson-contents" aria-label="学習の順番"><a href="#data-and-interaction"><span>01</span>点と線・基本操作</a><a href="#custom-drawing"><span>02</span>描画を変える</a><a href="#filtering"><span>03</span>検索とフィルタ</a></nav>
+  <LessonStep id="data-and-interaction" step="01" title="点と線を渡して、操作できるグラフにする" code={dataCode}>
+    <div slot="explanation"><p>点を<strong>ノード（node）</strong>、点同士を結ぶ線を<strong>リンク（link）</strong>と呼びます。<code>nodes</code>に対象を並べ、<code>links</code>の<code>source</code>と<code>target</code>に両端のIDを指定します。「どれとどれを結ぶか」は、アプリ側が決める情報です。</p><p>force-graphは、このデータの描画とズーム・パン・ドラッグを担当します。点を選んだ後の動作は<code>onNodeClick()</code>で追加でき、本番のARTGRAPHでは作品ページへ移動します。下のデモは、選んだ点の接続先を表示します。</p></div>
+    <p slot="task">Aを選んで接続先のB・Cを確認。次に点と背景をそれぞれドラッグし、ズームした後に「全体を表示」で戻してみてください。</p>
+    <ForceGraphPlayground instance="fg-basics" mode="basics" />
+  </LessonStep>
+  <LessonStep id="custom-drawing" step="02" title="見た目とラベルの出し方を変える" code={appearanceCode}>
+    <div slot="explanation"><p><code>nodeCanvasObject()</code>では、ノードの円や文字を自分で描けます。コールバックの<code>scale</code>はズーム倍率です。倍率に応じて作品名を出すと、全体を見ているときの文字の重なりを抑えられます。</p><p>色分けや線の太さは見た目の変更で、接続関係は変わりません。線を非表示にしてもリンクの力は残ります。また、矢印は描画の設定なので、作者同士の影響の方向などを自動で示すものではありません。</p></div>
+    <p slot="task">グループの色分けと矢印をオンにし、点の大きさや線幅を変更。ズーム倍率とラベルの閾値を変えて、文字が現れるタイミングを比較してください。</p>
+    <ForceGraphPlayground instance="fg-appearance" mode="appearance" />
+  </LessonStep>
+  <LessonStep id="filtering" step="03" title="表示する点と線を、一緒に絞り込む" code={filterCode}>
+    <div slot="explanation"><p>検索条件の判定はアプリ側で行い、結果を<code>graphData()</code>へ渡します。ノードを減らすときは、<strong>両端が残っているリンクだけを採用</strong>します。片方が消えた線をそのまま渡さないことが大切です。</p><p>孤立ノードは、絞り込み後に接続がなくなった点です。デモは変更前の座標をIDで覚え、同じ点の位置を引き継ぎます。描画中の座標変更が原本へ混ざらないよう、ライブラリにはコピーを渡しています。</p></div>
+    <p slot="task">A・B・Cへ絞ると3点・3本、D・E・Fでは3点・2本。Aだけ検索した後に「孤立ノードを表示」をオフにすると、0件になることを確認してください。</p>
+    <ForceGraphPlayground instance="fg-filter" mode="filter" />
+  </LessonStep>
+  <div class="lesson-next"><p>点の位置を決める仕組みは、force-graph内部のd3-forceが担当します。</p><a href="/learn/d3-force/">次は、力による位置計算を学ぶ →</a><a class="lesson-source" href="https://github.com/vasturiano/force-graph#api-reference">force-graph公式API</a></div>
+  <script src="../../scripts/learn-force-graph.ts"></script>
+</DemoLayout>

@@ -25,6 +25,17 @@ npm run build
 npm run test:build
 ```
 
+## 学習ページ
+
+ページ内で「解説・コード例 → 対応するデモ」の順に学べます。force-graphは3段階、d3-forceは4段階で、各デモの設定は独立しています。[補足の学習ガイド](docs/learn/README.md)も用意しています。
+
+| ライブラリ | 補足Markdown | 学習ページURL |
+| --- | --- | --- |
+| force-graph | [描画・操作・検索とフィルタ](docs/learn/force-graph.md) | `/learn/force-graph/` |
+| d3-force | [位置計算・各種の力・tick・停止と再開](docs/learn/d3-force.md) | `/learn/d3-force/` |
+
+デモは6ノード・6リンクの固定データを使用します。画面外では描画・計算を一時停止し、動きを減らす設定にも対応します。各ページの末尾から補足ノートをダウンロードできます。
+
 ## データ更新
 
 ```sh

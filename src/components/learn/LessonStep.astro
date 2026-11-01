@@ -1,0 +1,13 @@
+---
+interface Props { id: string; step: string; title: string; code: string; }
+const { id, step, title, code } = Astro.props;
+---
+<section class="lesson-step" id={id} data-lesson-step={id} aria-labelledby={`${id}-title`}>
+  <div class="lesson-copy">
+    <h2 id={`${id}-title`}>{step}. {title}</h2>
+    <div class="lesson-explanation"><slot name="explanation" /></div>
+    <details class="lesson-code"><summary>対応するコードを見る</summary><pre><code>{code}</code></pre></details>
+    <div class="lesson-task"><span>やってみる</span><slot name="task" /></div>
+  </div>
+  <div class="lesson-interactive"><slot /></div>
+</section>
